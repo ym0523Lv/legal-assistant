@@ -1,0 +1,11 @@
+flask
+flask-cors
+chromadb
+sentence-transformers
+huggingface-hub
+transformers
+requests
+PyPDF2
+pandas
+numpy
+onnxruntime

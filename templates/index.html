@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="app">
+<head>
+    <meta charset="UTF-8">
+    <title>法律助手</title>
+    <style>
+        /* 豆包风格布局 + 深色模式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f7fa;
+        }
+
+        /* 左侧聊天区（58% 宽度） */
+        .chat-panel {
+            width: 58%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e3e8;
+        }
+
+        .chat-header {
+            padding: 18px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e0e3e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2d3d;
+        }
+
+        .theme-toggle {
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .theme-toggle:hover {
+            background: #f0f2f5;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            line-height: 1.8; /* 增大行高实现自动换行 */
+            font-size: 15px;
+            white-space: pre-wrap; /* 强制换行 */
+        }
+
+        .user-message {
+            background: #1089ff;
+            color: #fff;
+            align-self: flex-end;
+            box-shadow: 0 2px 8px rgba(16, 137, 255, 0.2);
+        }
+
+        .assistant-message {
+            background: #fff;
+            border: 1px solid #e0e3e8;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 法律条文高亮（可点击） */
+        .law-ref {
+            color: #1089ff;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .law-ref:hover {
+            opacity: 0.9;
+        }
+
+        /* 输入区 */
+        .chat-input {
+            display: flex;
+            padding: 18px 24px;
+            background: #fff;
+            border-top: 1px solid #e0e3e8;
+        }
+
+        #userInput {
+            flex: 1;
+            height: 70px;
+            padding: 14px 16px;
+            border: 1px solid #e0e3e8;
+            border-radius: 8px;
+            resize: none;
+            font-size: 15px;
+            color: #333;
+            white-space: pre-wrap; /* 输入框自动换行 */
+        }
+
+        #userInput:focus {
+            outline: none;
+            border-color: #1089ff;
+            box-shadow: 0 0 0 2px rgba(16, 137, 255, 0.1);
+        }
+
+        #sendBtn {
+            margin-left: 12px;
+            padding: 0 24px;
+            background: #1089ff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            height: 70px;
+        }
+
+        /* 右侧 PDF 预览区（42% 宽度） */
+        .detail-panel {
+            width: 42%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pdf-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+
+        #pdfViewer {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 加载动画 */
+        .typing-indicator {
+            background: #f0f2f5;
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: #999;
+            align-self: flex-start;
+            animation: pulse 1.5s infinite;
+            font-size: 15px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.6; }
+        }
+
+        /* 深色模式 */
+        .dark-theme {
+            background: #1f2d3d;
+        }
+
+        .dark-theme .chat-panel {
+            background: #1f2d3d;
+            border-right-color: #37495e;
+        }
+
+        .dark-theme .chat-header {
+            background: #1f2d3d;
+            border-bottom-color: #37495e;
+        }
+
+        .dark-theme .header-title {
+            color: #fff;
+        }
+
+        .dark-theme .theme-toggle {
+            color: #999;
+        }
+
+        .dark-theme .theme-toggle:hover {
+            background: #37495e;
+        }
+
+        .dark-theme .chat-messages {
+            background: #1f2d3d;
+        }
+
+        .dark-theme .assistant-message {
+            background: #2b3b4e;
+            border-color: #37495e;
+            color: #fff;
+        }
+
+        .dark-theme .user-message {
+            background: #1089ff;
+            box-shadow: 0 2px 8px rgba(16, 137, 255, 0.3);
+        }
+
+        .dark-theme .chat-input {
+            background: #1f2d3d;
+            border-top-color: #37495e;
+        }
+
+        .dark-theme #userInput {
+            background: #2b3b4e;
+            border-color: #37495e;
+            color: #fff;
+        }
+
+        .dark-theme #sendBtn {
+            background: #0c79e5;
+        }
+
+        .dark-theme .detail-panel {
+            background: #1f2d3d;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .dark-theme ::-webkit-scrollbar-thumb {
+            background: #37495e;
+        }
+    </style>
+</head>
+<body>
+    <!-- 左侧聊天区 -->
+    <div class="chat-panel">
+        <div class="chat-header">
+            <div class="header-title">法律助手</div>
+            <div class="theme-toggle" id="themeToggle">深色模式</div>
+        </div>
+        <div class="chat-messages" id="messages">
+            <div class="assistant-message message">
+                您好！我是法律助手，支持解析《民法典》条文<br>
+                点击 <span class="law-ref" data-law="民法典" data-article="1079" data-pdf-page="20">《民法典》第1079条</span> 查看离婚相关条文（PDF 第20页）
+            </div>
+        </div>
+        <div class="chat-input">
+            <textarea id="userInput" placeholder="输入法律问题（如：夫妻感情破裂如何离婚？）"></textarea>
+            <button id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <!-- 右侧 PDF 预览区 -->
+    <div class="detail-panel">
+        <div class="pdf-container">
+            <iframe id="pdfViewer" src="/get_pdf" frameborder="0"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // 深色模式切换（记忆用户选择）
+        const themeToggle = document.getElementById('themeToggle');
+        const app = document.getElementById('app');
+
+        themeToggle.addEventListener('click', () => {
+            app.classList.toggle('dark-theme');
+            localStorage.setItem('theme', app.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+
+        // 初始化主题
+        if (localStorage.getItem('theme') === 'dark') {
+            app.classList.add('dark-theme');
+        } else {
+            app.classList.remove('dark-theme');
+        }
+
+        // 发送消息到后端
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const userQuestion = input.value.trim();
+            if (!userQuestion) return;
+
+            // 显示用户消息
+            addMessage(userQuestion, 'user');
+            input.value = '';
+
+            // 显示加载动画
+            const messagesDiv = document.getElementById('messages');
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'assistant-message message typing-indicator';
+            typingIndicator.textContent = '正在分析法律问题...';
+            messagesDiv.appendChild(typingIndicator);
+
+            try {
+                // 调用后端 /chat 接口
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: userQuestion })
+                });
+                const data = await response.json();
+
+                // 移除加载动画
+                typingIndicator.remove();
+
+                // 格式化回复：法律条文高亮 + PDF 页码绑定
+                const formattedReply = data.reply.replace(
+                    /《([^》]+)》第(\d+)条/g,
+                    (_, lawName, articleNo) => {
+                        // 从后端获取 PDF 页码映射（示例：第1079条对应第20页）
+                        const pdfPage = data.law_mapping[articleNo] || 1;
+                        return `<span class="law-ref" data-law="${lawName}" data-article="${articleNo}" data-pdf-page="${pdfPage}">《${lawName}》第${articleNo}条</span>`;
+                    }
+                );
+
+                // 显示助手回复
+                addMessage(formattedReply, 'assistant');
+
+                // 绑定法律条文点击事件
+                bindLawLinks();
+
+            } catch (error) {
+                typingIndicator.remove();
+                addMessage('网络错误，请重试', 'assistant');
+                console.error('请求失败:', error);
+            }
+        }
+
+        // 添加消息到聊天区（自动换行）
+        function addMessage(content, role) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `${role}-message message`;
+            messageDiv.innerHTML = content;
+
+            // 动画：从底部滑入
+            messageDiv.style.opacity = '0';
+            messageDiv.style.transform = 'translateY(10px)';
+            messagesDiv.appendChild(messageDiv);
+
+            setTimeout(() => {
+                messageDiv.style.opacity = '1';
+                messageDiv.style.transform = 'translateY(0)';
+            }, 100);
+
+            // 滚动到底部（平滑）
+            messagesDiv.scrollTo({
+                top: messagesDiv.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // 点击法律条文 → 跳转 PDF 对应页码
+        function showLawInPdf(lawName, articleNo, pdfPage) {
+            const pdfViewer = document.getElementById('pdfViewer');
+            // 跳转 PDF 页码（需后端支持）
+            pdfViewer.src = `/get_pdf?page=${pdfPage}`;
+
+            // 滚动到 PDF 区域顶部
+            document.querySelector('.detail-panel').scrollTop = 0;
+            console.log(`查看《${lawName}》第${articleNo}条，PDF 第${pdfPage}页`);
+        }
+
+        // 绑定法律条文点击事件
+        function bindLawLinks() {
+            const links = document.querySelectorAll('.law-ref');
+            links.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    const lawName = e.target.getAttribute('data-law');
+                    const articleNo = e.target.getAttribute('data-article');
+                    const pdfPage = e.target.getAttribute('data-pdf-page');
+                    if (lawName && articleNo && pdfPage) {
+                        showLawInPdf(lawName, articleNo, pdfPage);
+                    }
+                });
+            });
+        }
+
+        // 初始化绑定已有条文
+        document.addEventListener('DOMContentLoaded', () => {
+            bindLawLinks();
+        });
+    </script>
+</body>
+</html>
